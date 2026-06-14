@@ -1,42 +1,66 @@
 # agent-kit
 
-Przenosny zestaw **skilli** i **kontraktu wspolpracy** dla Claude Code i Codex.
-Jeden folder = jedno zrodlo prawdy, dzialajace na wielu komputerach i we wszystkich projektach.
+Jedyne zrodlo prawdy dla **skilli** i **zasad pracy** (kontraktu wspolpracy)
+dla Claude Code i Codex. Przenosne przez GitHub miedzy maszynami.
 
-## Co to jest
+> Zasada: rozne maszyny, ale Claude Code + Codex + skille + zasady pracy zawsze te same.
 
-- `skills/` — wlasne skille (format `SKILL.md` wspolny dla Claude Code i Codex).
-- `instructions/collaboration.md` — globalny kontrakt: jak Claude i Codex wspolpracuja.
-- `skills/agent-kit-sync/scripts/install.ps1` — bootstrap: podlacza skille i kontrakt na danym komputerze.
+## Struktura
 
-## Jak to dziala
-
-Claude i Codex szukaja skilli w sztywnych miejscach (`~/.claude/skills`, `~/.codex/skills`).
-`install.ps1` tworzy tam **junctiony** (zlacza katalogow) wskazujace na `agent-kit/skills/*`,
-wiec edytujesz pliki w jednym miejscu (repo), a oba narzedzia widza je od razu.
-
-Junctiony na Windows NIE wymagaja admina. Sa lokalne dla komputera — przenosisz FOLDER,
-a junctiony odtwarzasz przez `install.ps1` na kazdej maszynie.
-
-## Bootstrap na nowym komputerze
-
-```powershell
-git clone <adres-repo> "$HOME\agent-kit"
-& "$HOME\agent-kit\skills\agent-kit-sync\scripts\install.ps1"
+```
+agent-kit/
+  install.ps1                 # synchronizacja na maszyne (kopiowanie)
+  instructions/
+    collaboration.md          # kontrakt = zasady pracy (role, delegowanie, twarde zasady)
+  skills/
+    01-domena-grzewcza-kolton/
+    02-dokumenty-i-lokalizacja/
+    03-srodowisko-windows-python/
+    04-meta-zarzadzanie-skillami/
+      agent-kit-sync/         # skill o zarzadzaniu tym repo
+      ...
 ```
 
-To wszystko — skille i globalny kontrakt sa podlaczone do Claude Code i Codex.
+Kategorie `01..04` to tylko porzadek. Skill = dowolny folder z plikiem `SKILL.md`
+(szukane rekurencyjnie). Nazwy folderow-skilli musza byc unikalne.
 
-> Uwaga: `install.ps1` NADPISUJE globalne `~/.claude/CLAUDE.md` i `~/.codex/AGENTS.md`
-> trescia z `instructions/collaboration.md`. Jesli masz tam wlasne instrukcje — najpierw je zgraj.
+## Jak dziala (kopiowanie, nie junctiony)
 
-## Dodanie nowego skilla
+`install.ps1` KOPIUJE skille do `~/.claude/skills` i `~/.codex/skills` jako prawdziwe
+foldery, oraz wgrywa `instructions/collaboration.md` do `~/.claude/CLAUDE.md` i
+`~/.codex/AGENTS.md`. Kopie dzialaja zawsze i nie zaleza od lokalizacji repo
+(repo mozesz trzymac gdziekolwiek i przenosic).
 
-1. `skills/<nazwa>/SKILL.md` z frontmatterem `name` + `description`.
-2. Odpal `install.ps1` (zlinkuje rowniez nowy skill).
+Koszt: po edycji skilla/kontraktu odpal `install.ps1`, zeby skopiowac zmiane.
+Edytuj zawsze w repo (kopie nie sa "live").
+
+## Nowa maszyna (bootstrap)
+
+```powershell
+winget install GitHub.cli --source winget   # jesli brak gh
+gh auth login                                # raz, logowanie
+git clone https://github.com/mikolajharnas/agent-kit "$HOME\agent-kit"
+& "$HOME\agent-kit\install.ps1"
+```
+
+Po tym maszyna ma te same skille i te same zasady dla Claude i Codex.
+
+## Aktualizacja
+
+```powershell
+git -C "$HOME\agent-kit" pull
+& "$HOME\agent-kit\install.ps1"
+```
+
+## Dodanie skilla
+
+1. `skills/<kategoria>/<nazwa>/SKILL.md` (frontmatter `name` + `description`).
+2. `install.ps1`.
+3. `git add/commit/push`.
 
 ## Zasady
 
-- Edytuj pliki TYLKO w repo, nie przez junction.
-- Tu trafiaja TYLKO wlasne skille — nie systemowe (`.system`) ani z pluginow/marketplace.
+- Edytuj pliki TYLKO w repo.
+- Tu trafiaja TYLKO wlasne skille — nie systemowe (`.system`) ani z marketplace.
 - Zadnych sekretow, tokenow ani kluczy w repo.
+- `install.ps1` NADPISUJE globalne `~/.claude/CLAUDE.md` i `~/.codex/AGENTS.md`.

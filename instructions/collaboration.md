@@ -53,7 +53,7 @@ Na tym komputerze komenda `python` nie dziala (stub Windows). Pythona uruchamiaj
 
     py -3 skrypt.py
 
-Nie uzywaj `python` ani `python3`. (Patrz tez skill: py-runner.)
+Nie uzywaj `python` ani `python3`. (Patrz tez skill: python-windows-launcher.)
 
 ## Twarde zasady
 
