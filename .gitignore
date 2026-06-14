@@ -1,0 +1,10 @@
+# Nigdy nie wersjonuj sekretow ani lokalnych smieci
+*.key
+*.pem
+*.env
+.env
+auth.json
+.credentials.json
+*.log
+Thumbs.db
+.DS_Store
