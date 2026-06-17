@@ -47,6 +47,7 @@ Wspólne: `enabled, name, uuid, visibility` (`visible`/`hidden_adjust`).
 ## 5. Limity i pułapki walidacji
 - Max 3 komórki/rząd (wyżej). · `name` urządzenia bez znaków specjalnych (zob. [[sinum-remote-deploy]]).
 - Pola liczbowe suwaka MUSZĄ być liczbą — `-20` w PowerShellu bywa stringiem → 422 (użyj `(-20)`/`[double]`).
+- **Pola read-only** (np. `variant`) → 422 „Parameter is read only" — nie wysyłaj ich w PATCH; przy edycji elementów zachowuj `name/uuid/type/callback`.
 - **Brak elementu „wykres"** — wykresy tylko przez `statistics:addPoint` (zakładka Statystyki). Natywny kafelek pogody ma wykres jako funkcję aplikacji, nieodtwarzalną w custom device.
 - `logo`: `"kolton"`, `"blank"`… `icon`: zestaw **Font Awesome** (np. `"cloudy"`) — brak glifu „SINUM" (użyj badge tekstowego/emoji).
 

@@ -20,6 +20,8 @@ Wdrażanie kodu i konfiguracji na żywą centralę. Towarzyszące: [[sinum-lua-l
 
 ## 1. Autoryzacja i endpointy
 Base: `http://<central>/api/v1`. Nagłówek **`Authorization: <token>` (BEZ `Bearer`)**.
+- Token z aplikacji: **System → Integracje → Tokeny integracji zewnętrznych → Dodaj token** (typ pozwalający na operacje API). `Unauthorized` = zły/wygasły token, spacje w wartości, lub za małe uprawnienia.
+- ⚠️ Na testowanej centrali działa **bez `Bearer`**; część instancji/skryptów używa `Authorization: Bearer <token>`. Jeśli `Unauthorized` mimo dobrego tokenu — spróbuj wariantu z `Bearer` (zależne od centrali/firmware).
 - `GET  /devices/virtual/{id}` — pełny JSON w `data` (elements, widget, dialog, lua, enabled, banned, status, error_counter, max_errors…).
 - `GET  /devices/virtual/{id}/lua` — koperta `{ "data": "<kod>" }` (string, escaped unicode/`\r\n`).
 - `PATCH /devices/virtual/{id}` — aktualizacja pól (body niżej).
@@ -34,6 +36,8 @@ Base: `http://<central>/api/v1`. Nagłówek **`Authorization: <token>` (BEZ `Bea
 - **`name` bez znaków specjalnych** `! @ # $ % ^ & * ( ) + = { } [ ] \ " ' / ? < > | \`` (myślnik/spacja/PL OK). Najłatwiej: pomiń `name` (zostaje obecna).
 - **`enabled=true` wymagane**, by Lua działała (`status=unknown` + domyślne pola gdy false). Włącz: `PATCH { "enabled": true }`.
 - **Serwer zwraca SZCZEGÓŁOWE błędy** z ścieżką pola: `{"errors":{"widget.content[3].rows[0].cells":{"text":"Parameter exceeds maximum range"}}}`. **Iteruj po nich** — nie zgadują. Łap `$_.Exception.Response`, czytaj body strumieniem.
+- Częste komunikaty: `variant: Parameter is read only` → usuń `variant` z body (pole read-only); `…cells: Parameter exceeds maximum range` → za szeroki/zagnieżdżony rząd (limit 3 komórek); `hash.data`/`hash.meta` → z importu/eksportu JSON biblioteki z niepasującą kopertą meta — wol PATCH żywego urządzenia zamiast ręcznego importu częściowego JSON.
+- Przy PATCH widget/elements zachowuj istniejące `name/uuid/type/callback`, zmieniaj tylko potrzebne pola.
 
 ## 3. Dyscyplina wdrożeń (BEZWZGLĘDNA)
 Kolejność: **luacheck → backup → PATCH → config-finished → kontrola aplikacji → weryfikacja → rollback**.
@@ -57,6 +61,8 @@ Wzorzec gotowy: `deploy_sinum.ps1` (luacheck twarda bramka, backup, PATCH lua ba
 - Backup: `GET` pełny JSON → `…/backups/{id}_{stamp}.json` (z kodem do ręcznego przywrócenia).
 - Rollback: PATCH `{lua}` (lub `{elements,widget}`) z backupu → config-finished.
 - Weryfikacja po deploy: `banned`, `ban_reason`, `error_counter/max_errors`, długość/treść lua, obecność elementów, status.
+- Dodatkowy backup: eksport elementów do **CSV** (`name,type,on_change,value,visibility`) — szybki przegląd kontrolek i callbacków.
+- **Audyt callbacków** (po zmianie lua): zbierz funkcje regexem `function\s+CustomDevice:(\w+)` i porównaj ze zebranymi `on_change`/`on_press` elementów → zero brakujących definicji.
 
 ## 6. Behawioryzmy (z iteracji)
 - Diagnozuj 422/304 zmieniając jedno pole naraz (np. `{elements unchanged}`→200 vs `{full data}`→422) — izoluj przyczynę.

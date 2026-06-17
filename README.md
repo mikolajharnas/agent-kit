@@ -23,6 +23,7 @@ agent-kit/
       sinum-lua-language/     # jezyk Lua w SINUM
       sinum-remote-deploy/    # zdalne kodowanie centrali (REST API)
       sinum-widgets/          # tworzenie i edycja GUI
+      sinum-custom-device-ui/ # wzorce Modbus RTU / pending / alarmy (regulatory RS485)
 ```
 
 Kategorie `01..05` to tylko porzadek. Skill = dowolny folder z plikiem `SKILL.md`
