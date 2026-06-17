@@ -45,9 +45,10 @@ Kolejność: **luacheck → backup → PATCH → config-finished → kontrola ap
 2. Po wdrożeniu sprawdź: `banned=false`, pusty `ban_reason`, `error_counter=0`, oraz że kod/elementy faktycznie się zaaplikowały.
 3. Ban/błąd → rollback z backupu (`backups/*.json`).
 4. Nie obchodź `luacheck`. `statistics:addPoint` tylko z `unit`.
-Wzorzec gotowy: `deploy_sinum.ps1` (luacheck twarda bramka, backup, PATCH lua bajtami, weryfikacja, auto-rollback).
+Wzorzec gotowy: **builder urządzenia na pierwszym planie** (`patch_NN_widget.ps1`) z wbudowaną dyscypliną (luacheck → backup → PATCH **pełnego obiektu** `{name,lua,elements,widget,dialog}` → config-finished → weryfikacja → rollback). ⚠️ NIE `deploy_sinum.ps1` z samym `{lua}` — w tle wisi (zob. §6).
 
 ## 4. PowerShell (builder/deploy) — praktyka
+- ⚠️ **Uruchamiaj PATCH na PIERWSZYM PLANIE** (krótki builder, nie długi `deploy_sinum.ps1` z `Start-Sleep`/logami, który harness wrzuca w tło → PATCH wisi; zob. §6). Higiena pomocnicza: `$ProgressPreference='SilentlyContinue'`, `[Net.ServicePointManager]::Expect100Continue=$false` (NIE leczą wiszenia w tle, ale nie szkodzą).
 - Pobranie kodu: `GET …/lua` → `($r.data)` to string; zapis `[IO.File]::WriteAllText(path, $code, [Text.UTF8Encoding]::new($false))`.
 - Wysyłka: `$bytes=[Text.Encoding]::UTF8.GetBytes(($obj|ConvertTo-Json -Depth 100 -Compress)); Invoke-WebRequest -Method Patch -Uri $u -Headers @{Authorization=$tok} -ContentType 'application/json; charset=utf-8' -Body $bytes -TimeoutSec 45`.
 - **Plik `.ps1` zapisz jako UTF-8 z BOM**, jeśli zawiera emoji/PL (PS 5.1 inaczej czyta jako mojibake):
@@ -66,6 +67,6 @@ Wzorzec gotowy: `deploy_sinum.ps1` (luacheck twarda bramka, backup, PATCH lua ba
 
 ## 6. Behawioryzmy (z iteracji)
 - Diagnozuj 422/304 zmieniając jedno pole naraz (np. `{elements unchanged}`→200 vs `{full data}`→422) — izoluj przyczynę.
-- Wieszający się PATCH bywa winą nakładki (np. uruchomienie skryptu jako proces w tle) — bezpośredni PATCH potrafi wrócić w ~1 s.
+- **Wieszający się PATCH = skrypt poszedł W TŁO, NIE blokada centrali. Lekarstwo: PATCH na pierwszym planie.** Objaw: GET wraca od ręki, PATCH wisi w nieskończoność, a `-TimeoutSec`/`Expect100Continue=$false`/`$ProgressPreference='SilentlyContinue'`/nawet HttpClient z twardym timeoutem **NIE pomagają** (sprawdzone — w tle żadne z nich nie przerwało wiszącego PATCH). Przyczyna: nakładka harnessa wrzuca długie/gadatliwe skrypty (np. `deploy_sinum.ps1` z `Start-Sleep` + logami) w tło, gdzie wywołanie HTTP się zawiesza. **Builder GUI (krótki, foreground) zawsze wraca w ~1 s.** ⇒ **Kod wdrażaj tą samą drogą co GUI: PATCH pełnego obiektu z polem `lua` przez foreground builder** (`{ name, lua, elements, widget, dialog }` w JEDNYM PATCH, wraca ~1 s). NIE diagnozuj tego jako „zablokowana ścieżka zapisu centrali", NIE każ resetować centrali — uruchom PATCH na pierwszym planie. Trzymaj skrypty deploy krótkie i ciche, żeby harness ich nie wrzucał w tło.
 - Pełna przebudowa UI **resetuje wartości** suwaków/combo (nowe uuid) — ostrzegaj lub edytuj przyrostowo.
 - Duże urządzenia wdrażaj **fazami**; potwierdzaj logikę krytyczną (CWU, biwalent, jednostki) przed budową.
