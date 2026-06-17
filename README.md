@@ -19,9 +19,13 @@ agent-kit/
     04-meta-zarzadzanie-skillami/
       agent-kit-sync/         # skill o zarzadzaniu tym repo
       ...
+    05-tech-sinum/            # custom devices TECH SINUM (Lua)
+      sinum-lua-language/     # jezyk Lua w SINUM
+      sinum-remote-deploy/    # zdalne kodowanie centrali (REST API)
+      sinum-widgets/          # tworzenie i edycja GUI
 ```
 
-Kategorie `01..04` to tylko porzadek. Skill = dowolny folder z plikiem `SKILL.md`
+Kategorie `01..05` to tylko porzadek. Skill = dowolny folder z plikiem `SKILL.md`
 (szukane rekurencyjnie). Nazwy folderow-skilli musza byc unikalne.
 
 ## Jak dziala (kopiowanie, nie junctiony)
