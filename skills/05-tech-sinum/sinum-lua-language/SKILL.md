@@ -78,6 +78,13 @@ Jednostki: temp 0.1 °C, wiatr 0.1 km/h, ciśnienie hPa, opady 0.1 mm/h, UV 0.1,
 - **`variable[N]`** — trwała pamięć (NVM): `variable[1]:getValue()`, `:setValue(x)`, `:changedValue()`. Do agregatów tydzień/miesiąc, liczników między restartami.
 - **`os.time()` / `os.date(...)`** — czas lokalny centrali (zwykłe formatowanie). `utils.time:toISO(ts, …)`, `utils.table:forEach(...)`. Globale `sunrise/sunset/dawn/dusk`: `sunrise:hour()`, `:minute()`, `:timeOfDay()`.
 
+## 6b. Harmonogramy (`schedule[id]`)
+Globalny kontener `schedule[id]` (jak `wtp`). Typ przez `getValue("type")`: `thermal`, `temperature_curve`, `relay_control`. Custom device **odczytuje wynik** dowolnego harmonogramu (nie musi być przypisany) i stosuje go we własnej logice. Reaguj na zdarzenie **`schedule_state_changed`** lub poll 60 s; `schedule[id]:changed()` / `:changedValue("prop")`.
+- **`thermal`** — zadana wg pory dnia (bloki `start`/`end` w minutach + `target_temperature`, per dzień tygodnia) + `fallback`. Odczyt: `schedule[id]:getValue("current_target_temperature")` (0.1 °C). ⚠️ **Zakres tylko 5–35 °C** (termostat/pokój) — NIE nadaje się na zadaną CO/CWU wody (~45–55 °C); na nią zrób **własne okno czasowe** w widgecie (suwak nastawy + godziny od/do).
+- **`temperature_curve`** — krzywa pogodowa (punkty `outdoor_temperature → target_temperature`, interpolacja). `current_target_temperature` (zakres −50…120 °C — pasuje na wodę), `outdoor_temperature_override` (30 min), `target_temperature_correction`. Może liczyć z czujnika zamiast pogody.
+- **`relay_control`** — ON/OFF wg czasu (bloki per dzień + `control_policy`: `continuous` nadpisuje ręczne, `once_at_change` tylko na starcie). Odczyt: `schedule[id]:getValue("current.state")` → bool lub `nil` (dzień wyłączony). Wzorzec „harmonogram wyłączeń": `state==false` ⇒ wyłącz, `true/nil` ⇒ dozwolone.
+- Zmiana: `schedule[id]:setValue("points"|"friday"|"associations.thermostats", …)` — w blokach klucz `end` escape’uj `['end']` (słowo kluczowe Lua). Wybór harmonogramu w GUI: element **`schedule_selector`** → [[sinum-widgets]]. Dopisz `schedule` do `read_globals` w `.luacheckrc`.
+
 ## 7. Klient HTTP (integracje, np. AI/REST)
 Komponent typu `http_client` (dodany w zakładce Integracje, nagłówki/URL w konfiguracji). W kodzie:
 ```lua

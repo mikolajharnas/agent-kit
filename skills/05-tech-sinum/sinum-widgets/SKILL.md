@@ -33,8 +33,9 @@ PATCH `{ name?, logo?, elements:[…WSZYSTKIE istniejące + nowy…], widget, di
 | slider | `value, minimum, maximum, step, unit, label_text` | `on_change` | `slider-with-label` |
 | button | `text` | **`on_press`** | `button-default` |
 | device_selector | `accepted_classes, accepted_types, allow_multiple, associations.selected` | `on_change` | `device-selector-default` |
+| schedule_selector | `accepted_types([thermal/temperature_curve/relay_control]), schedule_id(0=brak)` | `on_change` | `schedule-selector-default` |
 
-Wspólne: `enabled, name, uuid, visibility` (`visible`/`hidden_adjust`).
+Wspólne: `enabled, name, uuid, visibility` (`visible`/`hidden_adjust`). **Nowy element BEZ `device_id`** (serwer nadaje).
 
 ## 4. Układ (layout)
 `content[]` = węzły: **`row`** (`cells:[…]`) lub **`section`** (`text` tytuł, `collapsible`, `collapsed_default`, `has_background`, `rows:[…]`).
@@ -47,6 +48,7 @@ Wspólne: `enabled, name, uuid, visibility` (`visible`/`hidden_adjust`).
 ## 5. Limity i pułapki walidacji
 - Max 3 komórki/rząd (wyżej). · `name` urządzenia bez znaków specjalnych (zob. [[sinum-remote-deploy]]).
 - Pola liczbowe suwaka MUSZĄ być liczbą — `-20` w PowerShellu bywa stringiem → 422 (użyj `(-20)`/`[double]`).
+- **`label_text` suwaka ma limit długości** (~30 znaków) → za długa etykieta = 422 „...label_text: Parameter exceeds maximum range" (mylące — to nie zakres liczbowy!). Skróć etykietę (emoji liczy się na plus). `value` tekstu znosi więcej (~40).
 - **Pola read-only** (np. `variant`) → 422 „Parameter is read only" — nie wysyłaj ich w PATCH; przy edycji elementów zachowuj `name/uuid/type/callback`.
 - **Brak elementu „wykres"** — wykresy tylko przez `statistics:addPoint` (zakładka Statystyki). Natywny kafelek pogody ma wykres jako funkcję aplikacji, nieodtwarzalną w custom device.
 - `logo`: `"kolton"`, `"blank"`… `icon`: zestaw **Font Awesome** (np. `"cloudy"`) — brak glifu „SINUM" (użyj badge tekstowego/emoji).
@@ -57,6 +59,8 @@ accepted_classes=["wtp","sbus"], accepted_types=["relay"]      # lub ["temperatu
 associations.selected = [ {class, id} ]   # lub [] = brak wyboru (serwer-nadane uuid później)
 ```
 W Lua: `local dev = self:getElement('sel'):getValue('associations.selected')` → obiekt; `dev:call("turn_on"/"turn_off")`, `dev:getValue("state"/"temperature")`, `dev:changedValue(...)`. Pozwala konfigurować wyjścia/czujniki bez `wtp[1]` w kodzie.
+
+**`schedule_selector`** — analogicznie do wyboru **harmonogramu** z listy (zob. [[sinum-lua-language]] §6b): pola `accepted_types=["relay_control"]` (lub thermal/temperature_curve; `[]`=wszystkie), `schedule_id=0` (brak; persystentne w bazie), `on_change`, komendy `select_schedule_id`/`set_accepted_types`. W Lua: `local sid = self:getElement('sel'):getValue('schedule_id'); if sid and sid>0 then local st = schedule[sid]:getValue('current.state') end`. Wariant layoutu: `schedule-selector-default` (potwierdzony).
 
 ## 7. Widoczność (dynamiczna)
 - `setValue('visibility','visible'|'hidden_adjust')` z Lua. `hidden_adjust` ukrywa i zwija miejsce.
