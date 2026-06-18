@@ -22,6 +22,7 @@ Wdrażanie kodu i konfiguracji na żywą centralę. Towarzyszące: [[sinum-lua-l
 Base: `http://<central>/api/v1`. Nagłówek **`Authorization: <token>` (BEZ `Bearer`)**.
 - Token z aplikacji: **System → Integracje → Tokeny integracji zewnętrznych → Dodaj token** (typ pozwalający na operacje API). `Unauthorized` = zły/wygasły token, spacje w wartości, lub za małe uprawnienia.
 - ⚠️ Na testowanej centrali działa **bez `Bearer`**; część instancji/skryptów używa `Authorization: Bearer <token>`. Jeśli `Unauthorized` mimo dobrego tokenu — spróbuj wariantu z `Bearer` (zależne od centrali/firmware).
+- **Dwa typy auth:** (1) **statyczny token API** — nie wygasa, ważny póki istnieje (UŻYWAMY tego); (2) login użytkownika → **JWT** (trzeba odświeżać przez endpoint refresh — niewygodne do automatyki). **Dwa sposoby podania tokenu** (oba potwierdzone): nagłówek `Authorization: <token>` **albo** parametr URL **`?access_token=<token>`** (przydatne dla klientów, które nie ustawiają nagłówków; ⚠️ URL-e trafiają do logów — wol nagłówek). Brak/zły token → **401**.
 - `GET  /devices/virtual/{id}` — pełny JSON w `data` (elements, widget, dialog, lua, enabled, banned, status, error_counter, max_errors…).
 - `GET  /devices/virtual/{id}/lua` — koperta `{ "data": "<kod>" }` (string, escaped unicode/`\r\n`).
 - `PATCH /devices/virtual/{id}` — aktualizacja pól (body niżej).
@@ -70,3 +71,24 @@ Wzorzec gotowy: **builder urządzenia na pierwszym planie** (`patch_NN_widget.ps
 - **Wieszający się PATCH = skrypt poszedł W TŁO, NIE blokada centrali. Lekarstwo: PATCH na pierwszym planie.** Objaw: GET wraca od ręki, PATCH wisi w nieskończoność, a `-TimeoutSec`/`Expect100Continue=$false`/`$ProgressPreference='SilentlyContinue'`/nawet HttpClient z twardym timeoutem **NIE pomagają** (sprawdzone — w tle żadne z nich nie przerwało wiszącego PATCH). Przyczyna: nakładka harnessa wrzuca długie/gadatliwe skrypty (np. `deploy_sinum.ps1` z `Start-Sleep` + logami) w tło, gdzie wywołanie HTTP się zawiesza. **Builder GUI (krótki, foreground) zawsze wraca w ~1 s.** ⇒ **Kod wdrażaj tą samą drogą co GUI: PATCH pełnego obiektu z polem `lua` przez foreground builder** (`{ name, lua, elements, widget, dialog }` w JEDNYM PATCH, wraca ~1 s). NIE diagnozuj tego jako „zablokowana ścieżka zapisu centrali", NIE każ resetować centrali — uruchom PATCH na pierwszym planie. Trzymaj skrypty deploy krótkie i ciche, żeby harness ich nie wrzucał w tło.
 - Pełna przebudowa UI **resetuje wartości** suwaków/combo (nowe uuid) — ostrzegaj lub edytuj przyrostowo.
 - Duże urządzenia wdrażaj **fazami**; potwierdzaj logikę krytyczną (CWU, biwalent, jednostki) przed budową.
+
+## 7. Dostęp zdalny (programowanie widgetów spoza LAN)
+**Programowanie widgetów = `PATCH` (token) DO centrali — ruch WCHODZĄCY.** REST jest w LAN; tożsamość auth (token) i builder NIE zmieniają się przy pracy zdalnej — zmienia się tylko **droga sieciowa** do `192.168.1.162`.
+- ⚠️ **Integracje „Klient X" (Modbus/MQTT/WebSocket/Zewnętrzny klient HTTP) są WYCHODZĄCE** (centrala → świat; w Lua `http_client[id]`/`mqtt_client[id]`/`websocket_client[id]`). **NIE służą do programowania centrali** ani logowania do niej — to do telemetrii/zdalnego sterowania przez broker/serwer, który kontrolujesz (centrala inicjuje połączenie, więc bez wystawiania portów). Inbound = tylko **Tokeny integracji zewnętrznych** (§1).
+- ✅ **Zdalne programowanie „jak w LAN" → VPN do sieci lokalnej.** Po wpięciu centrala jest pod tym samym IP; `$env:SINUM_TOKEN` (User scope) + foreground builder działają **bez zmian** w skryptach.
+- ❌ **Port-forward / wystawienie REST na internet — odradzane na produkcji** (przejęcie sterowania ogrzewaniem). Jeśli koniecznie: **tylko HTTPS**, token jak hasło, ogranicz IP/firewall.
+
+### Checklista — zdalne programowanie przez VPN
+1. **VPN** do sieci centrali aktywny (klient zestawiony, w tej samej podsieci lub z trasą do `192.168.1.x`).
+2. **Test łączności:** `Test-Connection 192.168.1.162` oraz `GET /api/v1/devices/virtual/{id}` z tokenem → oczekuj `200` (a bez tokenu `401`).
+3. **Token w User scope:** `[Environment]::GetEnvironmentVariable('SINUM_TOKEN','User')` (świeży proces nie dziedziczy zmiennej).
+4. **Wdrażaj jak zwykle:** `patch_NN_widget.ps1 -DryRun` → realny (foreground; luacheck+backup+weryfikacja+rollback).
+5. ⚠️ Przez VPN łącze bywa **wolniejsze/zrywalne** — PATCH foreground; jeśli zerwie, sprawdź stan przez `GET` (kod się aplikuje albo nie — backup masz). Nie ponawiaj w pętli w tle.
+
+### ❌ „Agent na centrali" (http_client woła własny REST) — NIE działa (sprawdzone, 1.22.1)
+Pomysł: custom device na centrali, który przez wychodzący `http_client` woła **własny** lokalny REST (`http://127.0.0.1/api/v1/...`) i sam aplikuje PATCH — żeby programować zdalnie BEZ sprzętu/VPN. **Przetestowane wyczerpująco — ślepy zaułek na tym firmware:**
+- ✅ Łączność loopback działa: zdarzenie **`http_client_request_completed`** wstaje, bez auth wraca czysty **`401`** (status czytelny tylko przez `c:status()` w obsłudze tego zdarzenia — `onMessage` NIE wstaje, `hasResponse()` zwraca false).
+- ❌ Kontener **`http_client[1..64]` jest PUSTY** — integracja „Zewnętrzny klient HTTP" nie wystawia się jako `http_client[id]`; dostępny tylko ograniczony obiekt z `getComponent("nazwa")`.
+- ❌ Żądanie z **realnym tokenem (~291 zn.)** → **`status=0`** każdą drogą (nagłówek w kodzie, `?access_token=` w URL, nagłówek integracji). Bez tokenu → `401`. Czyli ten klient nie udźwiga uwierzytelnionego wołania (a z PC ten sam token daje 200 — więc REST OK, słaby jest klient HTTP centrali).
+- **Wniosek:** self-PATCH agentem niewykonalny. Zdalne programowanie = **LAN lub VPN**. Nie próbuj tego znowu.
+- **Chmura SINUM** (zdalny podgląd w aplikacji) to **relay WebSocket/STOMP** (`wss://backend.prd.sinum24.com/proxy/gs-guide-websocket/...?deviceId=<ID>&access_token=<krótki JWT>`), **nie REST** — nie nadaje się do skryptowego PATCH. Pełne zarządzanie ręczne przez aplikację chmurową działa (kanał WS), ale nie programowo.
