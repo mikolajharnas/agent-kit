@@ -70,6 +70,7 @@ windSpeed() windGust() windDegrees() rain() snow() cloudCoverage() precipitation
 solarIrradiance() solarEnergy()`. Dzienny dodatkowo: `minTemperature() maxTemperature()`.
 Jednostki: temp 0.1 °C, wiatr 0.1 km/h, ciśnienie hPa, opady 0.1 mm/h, UV 0.1, irr. 0.1 W/m², energia 0.1 MJ/m².
 - **STREFA CZASU:** `timestamp()` to „unix w czasie lokalnym" — formatuj `os.date("!%H:%M", ts)` (flaga UTC), inaczej podwójne przesunięcie. Realny czas: `os.date("%H:%M")`.
+- ⚠️ **WSCHÓD/ZACHÓD:** `weather:getValue("sunrise"/"sunset")` na firmware 1.22 **zwraca nil** (widget pokazuje „—"). Do godzin słońca używaj **globalnych obiektów** `sunrise`/`sunset`: `string.format("%02d:%02d", sunrise:hour(), sunrise:minute())` (patrz sekcja 6). Dopisz `sunrise`/`sunset` do `read_globals` w `.luacheckrc`.
 - `weather()` bywa złożone („Rain, Partially cloudy") → ikona/opis **po słowach kluczowych** (priorytet opadów), nie exact-match. `weatherId()` daje stabilny enum.
 
 ## 6. Statystyki, powiadomienia, pamięć, czas
