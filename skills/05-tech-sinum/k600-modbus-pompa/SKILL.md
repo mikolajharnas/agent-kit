@@ -109,6 +109,15 @@ Pełna mapa rejestrów: arkusze `BMS_menu_użytkownika.ods` / `BMS_menu_instalat
 - Zapisy przez master-switch („Sterowanie aktywne", OFF = podgląd) + pending na rejestr
   + weryfikacja odczytem zwrotnym z logiem ✅/❌/⛔ — wzorzec z device 42.
 
+## Krzywe chłodnicze — MONOTONICZNOŚĆ (pompa waliduje!)
+
+Krzywa chłodnicza (529–533 @ +15/+20/+25/+30/+35 °C) MUSI być **malejąca** z rosnącą
+temp. zewnętrzną (cieplej na zewnątrz → zimniejsze zasilanie): default 18/16/14/12/10.
+**Pompa ODRZUCA zapis punktu, który łamie monotoniczność** (np. gdy +15 ustawisz na 5,
+zapis +20=16 jest odrzucany, bo 16 > 5). Objaw: „pompa trzyma <stara wartość>" mimo
+poprawnego zakresu. Analogicznie krzywa grzewcza bywa walidowana. Przy edycji krzywej
+zachowaj kolejność wartości; jeśli zapisy „nie wchodzą" — sprawdź monotoniczność, nie łącze.
+
 ## Regulator obrotów (wzorzec, device 42 sekcja 🧮)
 
 Przyrostowe PI na rej. 526 (wymaga trybu MANUAL): `dRPM = Kp·(e−e_prev) + Ki·e` na cykl
@@ -117,3 +126,13 @@ Przyrostowe PI na rej. 526 (wymaga trybu MANUAL): `dRPM = Kp·(e−e_prev) + Ki�
 całkę przy zadanej, limit zmiany/cykl (RPM) usuwa szarpanie, klamry min/max, rozruch 3450,
 pauza przy stanach 3/4/5/12 (alarm/odszranianie/EVU). Starty: Kp≈80 RPM/K, Ki≈15 RPM/(K·min),
 strefa 0.3 K, slew 200 RPM/cykl.
+
+## Regulator mocy chłodzenia (device 42 sekcja 🧊)
+
+Proporcja na rej. **5022** (zadana moc chłodzenia, AUTO): `moc = clamp(Pmin + Kp·(T−zadana), Pmin, Pmax)`,
+zadana = wypadkowa rej. **15**, czujnik zasilanie(59)/bufor chłodz.(14). **KLUCZOWE: reguluj TYLKO
+przy stanie==1 (aktywne chłodzenie).** W czuwaniu (stan 7) sprężarka stoi, temp. zasilania dryfuje
+i NIE reprezentuje zapotrzebowania — regulacja po niej = windup (moc rośnie jałowo, po starcie
+szarpie). W czuwaniu: TRZYMAJ moc (anchor = aktualne 5022), nie pisz. Uwaga błędu odwrotnie niż
+w grzaniu (za ciepło → więcej mocy, ale to chłodzenie: e = T − zadana). Zapis 5022 = bank
+instalatora (kod). To samo dotyczy każdego regulatora po temp. zasilania: aktywny tylko gdy sprężarka pracuje.
