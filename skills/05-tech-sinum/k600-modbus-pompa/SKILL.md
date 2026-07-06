@@ -40,9 +40,17 @@ Pełna mapa rejestrów: arkusze `BMS_menu_użytkownika.ods` / `BMS_menu_instalat
   z krzywej/stałej — idealna jako zadana dla własnego regulatora) · **10** CWU ·
   **11** zadana CWU (**×1!**) · **52** wyjście krzywej grzewczej.
 - **22** przepływ (l/h) · **35/36/37** EVU/SG/Blokada · 54/55 wersje.
+- **CHŁODZENIE (stan 82 = 1):** moc chłodnicza = **86** (×0.01 kW), EER = **88** (×0.01) —
+  rej. 84/87 dotyczą grzania; widget musi przełączać wg stanu. Bufor chłodzenia = **14**,
+  zadana chłodzenia (wypadkowa) = **15** (oba ×0.1 °C). Regulator własny: w chłodzeniu
+  błąd ODWRÓCONY (więcej obrotów = niższa temperatura).
 - Energia (32-bit LOW+HIGH, wartość = HIGH·65536+LOW): **94/95** cieplna (×0.1 kWh) ·
   **96/97 elektryczna ogrzewania — UWAGA: ×1 kWh (ODS błędnie podaje ×0.1!**
-  dowód: ciepło/prąd = SCOP z rej. 98) · **98** SCOP (×0.01) · 127/128 energia PC suma (×0.1).
+  dowód: ciepło/prąd = SCOP z rej. 98) · **98** SCOP (×0.01) · 127/128 energia PC suma (×0.1) ·
+  chłodnicza **99/100** (×0.1) · **elektryczna chłodzenia 101/102 — ×0.1 (zgodnie z ODS;
+  zweryfikowane SEER-em: 8744,5/2124,9 = 4,115 = rej. 103)** · **103** SEER (×0.01).
+  ⚠️ NIESPÓJNOŚĆ FIRMWARE: elektryczna grzania ×1, elektryczna chłodzenia ×0.1 —
+  każdą skalę energii weryfikuj trójkątem (ciepło/prąd = SCOP·SEER).
 - Diagnostyka/degradacja: **104** indeks właściwości parownika (oszronienie/fouling) ·
   105/106 czas od odszraniania · 109 liczba odszronień · 111 starty · **112** motogodziny ·
   110 napięcie międzyfazowe · 0–9 alarmy (bitfieldy).
