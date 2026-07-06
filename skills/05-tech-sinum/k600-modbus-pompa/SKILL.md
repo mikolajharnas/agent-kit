@@ -35,10 +35,16 @@ Pełna mapa rejestrów: arkusze `BMS_menu_użytkownika.ods` / `BMS_menu_instalat
   **90/91** dostępna moc max/min (obwiednia modulacji TERAZ) · **77** obroty sprężarki (RPM) ·
   **82** stan (enum: 0 wył, 2 grzanie, 4/5 odszranianie, 7 czuwanie, 10 ręczny, 12 blokada EVU) ·
   **83** sprężarka 0/1 · **92** korekta algorytmu Comfort (W).
-- Temperatury (int16, ×0.1 °C): **59** zasilanie · **60** powrót · **16** zewnętrzna (moduł) ·
-  **57** zewnętrzna (inwerter) · **12** bufor grzanie · **13** zadana ogrzewania (wypadkowa
-  z krzywej/stałej — idealna jako zadana dla własnego regulatora) · **10** CWU ·
-  **11** zadana CWU (**×1!**) · **52** wyjście krzywej grzewczej.
+- Temperatury POMIAROWE (int16, ×0.1 °C): **59** zasilanie · **60** powrót · **16** zewnętrzna
+  (moduł) · **57** zewnętrzna (inwerter) · **12** bufor grzanie · **14** bufor chłodzenie ·
+  **10** CWU · **52/53** wyjście krzywej grzewczej/chłodniczej.
+- **ZADANE/NASTAWY są ×1 — w tym WYPADKOWE: rej. 13 (zadana ogrzewania) i 15 (zadana
+  chłodzenia)! ODS błędnie podaje ×0.1** (dowód: raw rej. 15 == stała chłodzenia z rej. 528;
+  raw 34/43 w rej. 13 = sensowna zadana zasilania CO). Reguła: pomiary ×0.1, nastawy ×1.
+  Wypadkowe 13/15 = idealna zadana dla własnego regulatora (uwzględniają stałą/krzywą+SG).
+- Nastawy chłodzenia (bank użytkownika): **527** stała(0)/krzywa(1) · **528** stała ·
+  **529–533** krzywa chłodnicza przy T zewn. +15/+20/+25/+30/+35 °C · **534** dolny limit
+  zadanej (odczyt; pochodna temp. krzepnięcia płynu, rej. 5153).
 - **22** przepływ (l/h) · **35/36/37** EVU/SG/Blokada · 54/55 wersje.
 - **CHŁODZENIE (stan 82 = 1):** moc chłodnicza = **86** (×0.01 kW), EER = **88** (×0.01) —
   rej. 84/87 dotyczą grzania; widget musi przełączać wg stanu. Bufor chłodzenia = **14**,
