@@ -109,14 +109,28 @@ Pełna mapa rejestrów: arkusze `BMS_menu_użytkownika.ods` / `BMS_menu_instalat
 - Zapisy przez master-switch („Sterowanie aktywne", OFF = podgląd) + pending na rejestr
   + weryfikacja odczytem zwrotnym z logiem ✅/❌/⛔ — wzorzec z device 42.
 
-## Krzywe chłodnicze — MONOTONICZNOŚĆ (pompa waliduje!)
+## Krzywe chłodnicze — MONOTONICZNOŚĆ + fallback na stałą + rozdzielczość
 
-Krzywa chłodnicza (529–533 @ +15/+20/+25/+30/+35 °C) MUSI być **malejąca** z rosnącą
-temp. zewnętrzną (cieplej na zewnątrz → zimniejsze zasilanie): default 18/16/14/12/10.
-**Pompa ODRZUCA zapis punktu, który łamie monotoniczność** (np. gdy +15 ustawisz na 5,
-zapis +20=16 jest odrzucany, bo 16 > 5). Objaw: „pompa trzyma <stara wartość>" mimo
-poprawnego zakresu. Analogicznie krzywa grzewcza bywa walidowana. Przy edycji krzywej
-zachowaj kolejność wartości; jeśli zapisy „nie wchodzą" — sprawdź monotoniczność, nie łącze.
+Krzywa chłodnicza (529–533 @ +15/+20/+25/+30/+35 °C) MUSI **maleć** z rosnącą temp.
+zewnętrzną (cieplej → zimniejsze zasilanie), np. 6/5/4/3/2. **Gdy krzywa jest
+NIEMONOTONICZNA, pompa ją IGNORUJE i spada na STAŁĄ (rej. 528)** — objaw: zadana (rej.15)
+nie zależy od krzywej, tylko = 528. Dowód: przy poprawnej malejącej krzywej rej.15 śledzi
+krzywą; przy połamanej trzyma się 528.
+- **Edycję krzywej pompa przyjmuje zwykle w POSTOJU** (nie w trakcie aktywnego chłodzenia);
+  pisz punkty od strony najniższej wartości (+35 → +15), by na każdym kroku zachować malejący ciąg.
+- **ROZDZIELCZOŚĆ:** rej. 15 (wypadkowa zadana, robocza) = **pełne stopnie (×1)** — dostaniesz 4
+  albo 5, nie 4,5. Wewnętrzna interpolacja jest w dziesiątkach (rej. 53 = ×0,1), ale do zadanej
+  roboczej zaokrąglana do całości.
+
+## ⚠️ CACHE ODCZYTU MODBUS — nie walcz z nim pętlą (godziny stracone!)
+
+SINUM cache'uje odczyty (cache_refresh). Po zapisie readback bywa STARY/NIESPÓJNY między
+rejestrami przez minuty. **NIE rób pętli „weryfikuj-i-dopisz"** (verify-retry co 60 s) — czyta
+stary cache, „widzi niezgodność", dopisuje, znów stary cache → sam ROZCHWIEJESZ nastawy
+(punkty krzywej skaczą, zadana oscyluje). Wzorzec: **zapisz RAZ (w postoju), potem ZOSTAW
+w spokoju** i odczytaj prawdę po kilku minutach bez zapisów. Autorytatywny jest wyświetlacz
+pompy, nie chwilowe skoki w widgecie. Pojedyncze błędne odczyty (np. tryb chłodz. myląco jako
+grzanie → zadana pokazuje rej.13 zamiast 15) też są artefaktem cache — poczekaj na spójny odczyt.
 
 ## Regulator obrotów (wzorzec, device 42 sekcja 🧮)
 
