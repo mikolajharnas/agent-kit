@@ -109,18 +109,29 @@ Pełna mapa rejestrów: arkusze `BMS_menu_użytkownika.ods` / `BMS_menu_instalat
 - Zapisy przez master-switch („Sterowanie aktywne", OFF = podgląd) + pending na rejestr
   + weryfikacja odczytem zwrotnym z logiem ✅/❌/⛔ — wzorzec z device 42.
 
-## Krzywe chłodnicze — MONOTONICZNOŚĆ + fallback na stałą + rozdzielczość
+## Krzywe chłodnicze — walidacja monotoniczności PER ZAPIS (zweryfikowane empirycznie)
 
-Krzywa chłodnicza (529–533 @ +15/+20/+25/+30/+35 °C) MUSI **maleć** z rosnącą temp.
-zewnętrzną (cieplej → zimniejsze zasilanie), np. 6/5/4/3/2. **Gdy krzywa jest
-NIEMONOTONICZNA, pompa ją IGNORUJE i spada na STAŁĄ (rej. 528)** — objaw: zadana (rej.15)
-nie zależy od krzywej, tylko = 528. Dowód: przy poprawnej malejącej krzywej rej.15 śledzi
-krzywą; przy połamanej trzyma się 528.
-- **Edycję krzywej pompa przyjmuje zwykle w POSTOJU** (nie w trakcie aktywnego chłodzenia);
-  pisz punkty od strony najniższej wartości (+35 → +15), by na każdym kroku zachować malejący ciąg.
-- **ROZDZIELCZOŚĆ:** rej. 15 (wypadkowa zadana, robocza) = **pełne stopnie (×1)** — dostaniesz 4
-  albo 5, nie 4,5. Wewnętrzna interpolacja jest w dziesiątkach (rej. 53 = ×0,1), ale do zadanej
-  roboczej zaokrąglana do całości.
+Krzywa chłodnicza (529–533 @ +15/+20/+25/+30/+35 °C) maleje z rosnącą temp. zewn. (cieplej →
+zimniejsze zasilanie), np. 6/5/4/3/2. **Zapis działa w dowolnym momencie / trybie** (potwierdzone:
+531←7 wszedł i utrzymał się podczas aktywnego chłodzenia; NIE jest zależny od stanu pracy —
+wcześniejsza hipoteza „tylko w postoju/chłodzeniu" BŁĘDNA).
+- **PUŁAPKA: pompa waliduje monotoniczność przy KAŻDYM pojedynczym zapisie punktu, względem
+  AKTUALnych wartości sąsiadów.** Edycja jednego suwaka do wartości łamiącej malejący ciąg
+  z bieżącymi sąsiadami (np. obniżenie +30 poniżej aktualnego +35) = odrzucenie (cichy zapis-w-próżnię,
+  bez błędu Modbus, wartość nie zmienia się). To NIE zależy od finalnej krzywej — chodzi o stan przejściowy.
+- **ROZWIĄZANIE (wzorzec, device 42 `writeCoolCurveSafe`): edycja dowolnego suwaka zapisuje CAŁĄ
+  krzywą naraz, w kolejności od +35 w górę do +15, z wymuszeniem malejąco** (v15≥v20≥…≥v35). Wtedy na
+  każdym kroku ciąg jest malejący → wszystkie punkty wchodzą, także niskie. Pojedynczy zapis punktu = zła droga.
+- Min wartość = rej. 534 (dynamiczny, zwykle 1°C, pochodna temp. krzepnięcia płynu 5153). Stała (528)
+  nie ma sąsiadów → zawsze wchodzi (stąd „w trybie stałej działa, a suwaki krzywej nie" — to była monotoniczność, nie kod/adresy).
+- **ROZDZIELCZOŚĆ:** rej. 15 (wypadkowa robocza) = **pełne stopnie (×1)** — dostaniesz 4 albo 5, nie 4,5.
+  Interpolacja wewn. w dziesiątkach (rej. 53 ×0,1), zaokrąglana do całości.
+
+## ⚠️ Diagnostyka „zapis nie wchodzi": rozróżniaj przyczyny
+`❌ NIE przyjęty` (pending TTL, brak błędu Modbus) = pompa ACK-uje ale nie zmienia wartości — to
+walidacja treści (monotoniczność / zakres 534), NIE zły adres. `⛔ ILLEGAL` (onAsyncRequestFailure) =
+błąd Modbus (adres/zakres). Zanim obwinisz adresy/łącze: zrób KONTROLOWANY TEST — zapisz jeden rejestr
+na wyraźną, poprawną wartość i sprawdź odczyt. (Tu: 528←12 i 531←7 oba się utrzymały → adresy/kod OK.)
 
 ## ⚠️ CACHE ODCZYTU MODBUS — nie walcz z nim pętlą (godziny stracone!)
 
