@@ -122,8 +122,14 @@ wcześniejsza hipoteza „tylko w postoju/chłodzeniu" BŁĘDNA).
 - **ROZWIĄZANIE (wzorzec, device 42 `writeCoolCurveSafe`): edycja dowolnego suwaka zapisuje CAŁĄ
   krzywą naraz, w kolejności od +35 w górę do +15, z wymuszeniem malejąco** (v15≥v20≥…≥v35). Wtedy na
   każdym kroku ciąg jest malejący → wszystkie punkty wchodzą, także niskie. Pojedynczy zapis punktu = zła droga.
-- Min wartość = rej. 534 (dynamiczny, zwykle 1°C, pochodna temp. krzepnięcia płynu 5153). Stała (528)
-  nie ma sąsiadów → zawsze wchodzi (stąd „w trybie stałej działa, a suwaki krzywej nie" — to była monotoniczność, nie kod/adresy).
+- **DOLNY LIMIT KRZYWEJ = 5°C (zweryfikowane 2026-07-08): punkt krzywej chłodniczej NIE wejdzie poniżej 5°C**
+  (wartości 4/3/2/1 odrzucane cicho; ≥5 wchodzą, podwyżki i obniżki, dowolna kolejność). To NIE jest rej. 534
+  (który pokazuje 1) — to osobny limit (prawdopodobnie anty-kondensacja/mróz zasilania chłodzenia).
+  **ASYMETRIA: stała (528) NIE ma tego limitu — przyjmuje 2°C i daje efektywną zadaną 2°C.** Więc dla zimnej
+  zadanej (2-4°C) używaj STAŁEJ (527=0); krzywa chłodnicza min 5°C. (Stąd „w stałej działa, a krzywa nie" —
+  user chciał <5°C, co krzywa odrzuca.)
+- Kolejność zapisu świadoma kierunku: OBNIŻKI od zimnego końca (+35→+15), PODWYŻKI od ciepłego (+15→+35) —
+  inaczej pojedynczy zapis łamie monotoniczność chwilowo. writeCoolCurveSafe robi oba przebiegi wg last-readback.
 - **ROZDZIELCZOŚĆ:** rej. 15 (wypadkowa robocza) = **pełne stopnie (×1)** — dostaniesz 4 albo 5, nie 4,5.
   Interpolacja wewn. w dziesiątkach (rej. 53 ×0,1), zaokrąglana do całości.
 
