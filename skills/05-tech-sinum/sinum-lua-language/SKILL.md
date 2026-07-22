@@ -40,7 +40,10 @@ oraz `*_parent_device[id]`.
 - **Przekaźnik:** `dev:call("turn_on")` / `dev:call("turn_off")` / `dev:call("toggle")`; stan `dev:getValue("state") == true`.
 - **Czujnik:** `dev:getValue("temperature")` (w 0.1 °C → /10). Sentinel braku danych (np. −32768) — filtruj.
 - **Parametry/komendy:** `dev:setValue("blockade", true)` (zawór `common_valve`/obieg: blokada = obieg wyłączony), `dev:call("set_target_temperature", 244)`, `dev:call("open", 55)`.
-- **Termostat wirtualny — tryb on/off:** `dev:call("set_mode", "off"|"heating"|"cooling")` — **KOMENDA**, nie `setValue("mode",…)` (blokuje `mode_mutable`; zły zapis cicho pada w `pcall`, err=0). Obieg i-3 (kontener `container_name==1290`): `dev:setValue("parameters.811.value", 1)` = tryb letni ON / `0` = grzanie.
+- **Termostat wirtualny — tryb on/off:** `dev:call("set_mode","off"|"heating"|"cooling")` **albo** `dev:setValue("mode", …)` — **oba działają** (przykład TECH używa `setValue` z gardą `if dev:getValue("mode_mutable")`). ⚠️ Objaw „nie steruje termostatem" zwykle NIE wynika z metody zapisu, tylko z **pustego odczytu selektora** (patrz punkt o `associations.selected`) — najpierw sprawdź, ile urządzeń realnie zwraca selektor.
+- **Termostat — harmonogram:** `dev:call("enable_schedule_mode")` = idź wg SWOJEGO przypisanego harmonogramu; `dev:call("enable_constant_mode", target_0_1C)` = trzymaj stałą zadaną (ignoruj harmonogram). Tak się **włącza/wyłącza** harmonogram bez zmieniania przypisań. (Przypisanie to osobna rzecz: `schedule[id]:setValue("associations.thermostats", {uchwyty})`, `{}` = odepnij wszystkie.)
+- **Głowica grzejnikowa** `radiator_actuator`: `dev:call("open", 0..100)` (%), property `opening`/`opening_minimum`/`opening_maximum`/`emergency_opening`. ⚠️ Gdy głowica jest przypisana do termostatu, termostat ją zaraz przymknie — na czas wymuszenia odbierz mu sterowanie: `thermostat:setValue("radiator_control.use_for_heating", false)` i **pamiętaj przywrócić `true`**.
+- Obieg i-3 (kontener `container_name==1290`): `dev:setValue("parameters.811.value", 1)` = tryb letni ON / `0` = grzanie.
 - **Zmiana wykryta:** `dev:changedValue("state")` (zwraca true gdy zmieniło się od ostatniego odczytu).
 - **Opóźnione:** `dev:setValueAfter("state", false, 30)`; `dev:call("enqueue_action", { type="parameter", param_or_command="state", argument=true, … })`.
 
