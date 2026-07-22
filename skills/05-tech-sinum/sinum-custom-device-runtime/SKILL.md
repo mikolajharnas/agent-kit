@@ -31,6 +31,9 @@ ale `onInit` **się nie wykonuje** (obserwacja: log startowy z onInit nie pojawi
 a zegar w onEvent tykał). Konsekwencja: rejestracje robione tylko w onInit (np.
 `statistics:onQueryResult(...)`) po redeployu nie działają.
 **Fix:** rejestruj callbacki TEŻ w `onEvent` (idempotentnie, w `pcall`), nie tylko w onInit.
+**Powiązane:** jeśli sterownik zapisuje do urządzeń tylko na **TRANZYCJI** stanu (a nie co poll), to po
+deployu samego kodu (`-LuaOnly`, stan bez zmian) NIC się nie przeliczy — onInit nie ruszył, tranzycji nie
+było. Wymuś jednorazowo zmianą w configu (callback woła apply) albo poczekaj na realną tranzycję.
 
 ## 3. Trwałość w wartościach elementów (NVM bez tworzenia variable[])
 Wartości elementów **są trwałe** — widać je w GET urządzenia i przeżywają restart.
@@ -61,6 +64,9 @@ i **wartości suwaków/switchy/combo** do defaultów buildera → wymazuje przyp
 **Fix:** przed PATCH wczytaj bieżące `elements` z GET i **przepisz**: `associations.selected`
 device_selektorów oraz `value` slider/switch/combo/text-input (po `name`). Dla pól-magazynu stanu
 (`state_*`) też zachowuj wartość — inaczej każdy redeploy kasuje naukę.
+**Najprościej, gdy poprawka jest TYLKO w kodzie:** PATCH samego `{ "lua": … }` (builder `-LuaOnly`) —
+nie wysyłaj `elements`, więc wszystkie wybory i wartości zostają. Pełny rebuild (z przepisaniem z GET)
+rób tylko gdy zmieniasz strukturę GUI.
 
 ## 7. Debug „nie zapisuje / nie liczy" → sprawdź REALNE wartości configu
 Najdroższy błąd sesji: porzucone `set_var_id=1` w GUI kierowało zapis stanu do `variable[1]`

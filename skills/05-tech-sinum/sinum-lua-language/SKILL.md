@@ -35,10 +35,12 @@ end
 
 ## 2. Dostęp do urządzeń (kontenery klasowe)
 `wtp[id]` (przewodowe WTP), `sbus[id]` (SBUS), `tech[id]` (TECH RS), `virtual[id]`, `slink[id]`, `modbus[id]`,
-oraz `*_parent_device[id]`. Z `device_selector`: `self:getElement('sel'):getValue('associations.selected')`.
+oraz `*_parent_device[id]`.
+- ⚠️ **`device_selector` → `el:getValue("associations.selected")`** (ścieżka Z KROPKĄ) zwraca **gotowe UCHWYTY urządzeń** — wołaj na nich wprost `dev:call/:setValue/:getValue`; iteruj `pairs()`, długość `#`, pierwszy `[1]`. NIE zwraca `{class,id}` do ręcznego mapowania na `wtp[id]`/`virtual[id]`. Zły wzorzec (`getValue("associations")` + `.selected` + własny mapper) = **pusta lista, ciche „nie steruje wybranym", `error_counter=0`** (pętla po 0 elementach nie rzuca). JSON z REST pokazuje `{class,id}` — to inna reprezentacja niż Lua! (patrz [[sinum-device-selector-types]])
 - **Przekaźnik:** `dev:call("turn_on")` / `dev:call("turn_off")` / `dev:call("toggle")`; stan `dev:getValue("state") == true`.
 - **Czujnik:** `dev:getValue("temperature")` (w 0.1 °C → /10). Sentinel braku danych (np. −32768) — filtruj.
-- **Parametry/komendy:** `dev:setValue("blockade", true)`, `dev:call("set_target_temperature", 244)`, `dev:call("open", 55)`.
+- **Parametry/komendy:** `dev:setValue("blockade", true)` (zawór `common_valve`/obieg: blokada = obieg wyłączony), `dev:call("set_target_temperature", 244)`, `dev:call("open", 55)`.
+- **Termostat wirtualny — tryb on/off:** `dev:call("set_mode", "off"|"heating"|"cooling")` — **KOMENDA**, nie `setValue("mode",…)` (blokuje `mode_mutable`; zły zapis cicho pada w `pcall`, err=0). Obieg i-3 (kontener `container_name==1290`): `dev:setValue("parameters.811.value", 1)` = tryb letni ON / `0` = grzanie.
 - **Zmiana wykryta:** `dev:changedValue("state")` (zwraca true gdy zmieniło się od ostatniego odczytu).
 - **Opóźnione:** `dev:setValueAfter("state", false, 30)`; `dev:call("enqueue_action", { type="parameter", param_or_command="state", argument=true, … })`.
 

@@ -58,6 +58,7 @@ Wzorzec gotowy: **builder urządzenia na pierwszym planie** (`patch_NN_widget.ps
 - ⚠️ Liczby z wiodącym minusem: `New-Slider … -20 …` zrobi **string** „-20" → 422. Używaj `(-20)` lub `[double]`.
 - `pwsh` może nie istnieć → `powershell.exe`. Token z User scope: `[Environment]::GetEnvironmentVariable('SINUM_TOKEN','User')` (świeży proces nie dziedziczy zmiennej z innego okna).
 - Zegar/poll: po wdrożeniu odczekaj ~70 s na cykl (`onEvent` co 60 s), potem GET i weryfikuj wartości.
+- ⚠️ **luacheck szuka `.luacheckrc` od CWD w górę** — builder odpalony spoza folderu ze wspólnym `.luacheckrc` daje fałszywe warningi (`wtp`/`tech`/`dateTime`/`CustomDevice` „undefined") i blokuje PATCH. W builderze podawaj **`--config <ścieżka>\.luacheckrc`** jawnie. Warning `W512 loop is executed at most once` (pętla z `break`) = exit 1 → bramka blokuje; weź pierwszy przez indeks `[1]` zamiast `for…break`.
 
 ## 5. Backup, rollback, weryfikacja
 - Backup: `GET` pełny JSON → `…/backups/{id}_{stamp}.json` (z kodem do ręcznego przywrócenia).
@@ -69,7 +70,7 @@ Wzorzec gotowy: **builder urządzenia na pierwszym planie** (`patch_NN_widget.ps
 ## 6. Behawioryzmy (z iteracji)
 - Diagnozuj 422/304 zmieniając jedno pole naraz (np. `{elements unchanged}`→200 vs `{full data}`→422) — izoluj przyczynę.
 - **Wieszający się PATCH = skrypt poszedł W TŁO, NIE blokada centrali. Lekarstwo: PATCH na pierwszym planie.** Objaw: GET wraca od ręki, PATCH wisi w nieskończoność, a `-TimeoutSec`/`Expect100Continue=$false`/`$ProgressPreference='SilentlyContinue'`/nawet HttpClient z twardym timeoutem **NIE pomagają** (sprawdzone — w tle żadne z nich nie przerwało wiszącego PATCH). Przyczyna: nakładka harnessa wrzuca długie/gadatliwe skrypty (np. `deploy_sinum.ps1` z `Start-Sleep` + logami) w tło, gdzie wywołanie HTTP się zawiesza. **Builder GUI (krótki, foreground) zawsze wraca w ~1 s.** ⇒ **Kod wdrażaj tą samą drogą co GUI: PATCH pełnego obiektu z polem `lua` przez foreground builder** (`{ name, lua, elements, widget, dialog }` w JEDNYM PATCH, wraca ~1 s). NIE diagnozuj tego jako „zablokowana ścieżka zapisu centrali", NIE każ resetować centrali — uruchom PATCH na pierwszym planie. Trzymaj skrypty deploy krótkie i ciche, żeby harness ich nie wrzucał w tło.
-- Pełna przebudowa UI **resetuje wartości** suwaków/combo (nowe uuid) — ostrzegaj lub edytuj przyrostowo.
+- Pełna przebudowa UI **resetuje wartości** suwaków/combo (nowe uuid) **i KASUJE wybory `device_selector`** — ostrzegaj lub edytuj przyrostowo. **Poprawka SAMEGO kodu bez utraty konfiguracji użytkownika: PATCH tylko `{ "lua": … }`** (builder z flagą `-LuaOnly`) — merge top-level zostawia elements/widget/dialog i wszystkie wybory nietknięte. Debug bez zmiany GUI: zapisz diagnostykę do ukrytego elementu tekstowego (`hidden_adjust`) i czytaj przez `GET` (wartość elementu = NVM).
 - Duże urządzenia wdrażaj **fazami**; potwierdzaj logikę krytyczną (CWU, biwalent, jednostki) przed budową.
 
 ## 7. Dostęp zdalny (programowanie widgetów spoza LAN)
