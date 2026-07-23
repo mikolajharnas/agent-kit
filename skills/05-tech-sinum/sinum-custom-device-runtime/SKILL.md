@@ -76,6 +76,23 @@ Wszystkie hipotezy (limit długości, ukryte/zwinięte sekcje) były **zafałszo
 elementów/configu** (nie zakładaj). `pcall` wokół zapisu maskuje błąd routingu — usuń go na czas debugu
 albo loguj wynik. Footgun-pola, które już nie są potrzebne — **usuń z GUI**, nie zostawiaj.
 
+## 7b. Diagnostyka BEZ logów i bez dostępu do API (wdrożenie u klienta)
+Gdy sterownik działa na obcej centrali (brak VPN, brak REST, „mamy tylko logi"), jedynym kanałem
+jest **sam widget**. Zasady, które uratowały debugowanie głowic:
+- **`pcall` połyka wszystko** — przy każdej operacji na urządzeniach licz `znalezione / ok / błąd`
+  i zapisuj do widocznego elementu tekstowego **razem z treścią pierwszego błędu**. To właśnie
+  komunikat `Reason: … already managed by the virtual thermostat` wskazał przyczynę; bez tego
+  wszyscy zgadywali.
+- ⚠️ **Ustawiony timer/flaga NIE dowodzi, że coś zadziałało.** Kod ustawiał licznik czasu niezależnie
+  od tego, czy znalazł choć jedno urządzenie → „u mnie timer wystartował" mylnie sugerowało sukces.
+  Zawsze raportuj **liczbę faktycznie znalezionych obiektów** (`n=0` to najważniejsza informacja).
+- **Rozróżniaj błędy oczekiwane od realnych** (np. „managed by thermostat" to normalny tryb pracy,
+  nie awaria) — inaczej `błąd 18` wywołuje fałszywy alarm.
+- Log dwukanałowy: `print("[devNN] …")` → konsola SINUM, plus **ostatnie wpisy w elemencie tekstowym**
+  (prepend + przycięcie do ~280 zn.) → widoczne w aplikacji bez dostępu do centrali.
+- Weryfikując z PowerShella: ⚠️ `$_` wewnątrz `Where-Object` **przesłania** `$_` z zewnętrznego
+  `ForEach-Object` → skrypt kontrolny pokaże puste wartości i zgłosi nieistniejący błąd.
+
 ## 8. Inne potwierdzone drobiazgi
 - **Typy device_selector / jednostki:** `accepted_types=[]` = wszystkie; `heat_meter` ma `active_power`
   w **mW** (×1e-9 → kW!), `energy_meter`/`heat_pump` → `actual_power`/`electrical_power`. Lista czujników

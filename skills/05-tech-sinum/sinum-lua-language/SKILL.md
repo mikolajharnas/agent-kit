@@ -42,10 +42,23 @@ oraz `*_parent_device[id]`.
 - **Parametry/komendy:** `dev:setValue("blockade", true)` (zawór `common_valve`/obieg: blokada = obieg wyłączony), `dev:call("set_target_temperature", 244)`, `dev:call("open", 55)`.
 - **Termostat wirtualny — tryb on/off:** `dev:call("set_mode","off"|"heating"|"cooling")` **albo** `dev:setValue("mode", …)` — **oba działają** (przykład TECH używa `setValue` z gardą `if dev:getValue("mode_mutable")`). ⚠️ Objaw „nie steruje termostatem" zwykle NIE wynika z metody zapisu, tylko z **pustego odczytu selektora** (patrz punkt o `associations.selected`) — najpierw sprawdź, ile urządzeń realnie zwraca selektor.
 - **Termostat — harmonogram:** `dev:call("enable_schedule_mode")` = idź wg SWOJEGO przypisanego harmonogramu; `dev:call("enable_constant_mode", target_0_1C)` = trzymaj stałą zadaną (ignoruj harmonogram). Tak się **włącza/wyłącza** harmonogram bez zmieniania przypisań. (Przypisanie to osobna rzecz: `schedule[id]:setValue("associations.thermostats", {uchwyty})`, `{}` = odepnij wszystkie.)
-- **Głowica grzejnikowa** `radiator_actuator`: `dev:call("open", 0..100)` (%), property `opening`/`opening_minimum`/`opening_maximum`/`emergency_opening`. ⚠️ Gdy głowica jest przypisana do termostatu, termostat ją zaraz przymknie — na czas wymuszenia odbierz mu sterowanie: `thermostat:setValue("radiator_control.use_for_heating", false)` i **pamiętaj przywrócić `true`**.
+- **Głowica grzejnikowa** `radiator_actuator`: `dev:call("open", 0..100)` (%), property `opening`/`opening_minimum`/`opening_maximum`/`emergency_opening`. **Zobacz sekcję 2b — sterowanie głowicą wymaga odebrania jej termostatowi.**
 - Obieg i-3 (kontener `container_name==1290`): `dev:setValue("parameters.811.value", 1)` = tryb letni ON / `0` = grzanie.
 - **Zmiana wykryta:** `dev:changedValue("state")` (zwraca true gdy zmieniło się od ostatniego odczytu).
 - **Opóźnione:** `dev:setValueAfter("state", false, 30)`; `dev:call("enqueue_action", { type="parameter", param_or_command="state", argument=true, … })`.
+
+## 2b. Głowice grzejnikowe ↔ termostat wirtualny (drogo okupione)
+- ⛔ **`glowica:call("open", x)` jest ODRZUCANE**, gdy głowica należy do termostatu:
+  `Validation failed! Command 'open' cannot be executed. Reason: Radiator actuator is already managed by the virtual thermostat.`
+- ✅ **Jedyny sposób:** odebrać termostatowi zarządzanie — `termostat:setValue("radiator_control.use_for_heating", false)`.
+  Wtedy `open()` przechodzi. **Po robocie przywróć `true`.**
+  ⚠️ Manual pisze przy tym „(always closed)" — to opis zachowania **termostatu** (przestaje ich używać do grzania), **NIE** wymuszenie zamknięcia głowicy. Odczytanie tego jako „zamyka" kosztowało kilka iteracji.
+- ⚠️ **KOLEJNOŚĆ przy kończeniu:** najpierw **zamknij/ustaw głowice** (są jeszcze odmanagowane → komenda przechodzi), **dopiero potem** oddaj `use_for_heating = true`. Odwrotna kolejność = komendy cicho odrzucone, głowice zostają otwarte.
+- ⛔ **`termostat:getValue("associations.radiator_actuators")` jest READ-ONLY** — odpięcia/przypięcia głowicy z Lua **nie da się** zrobić (w odróżnieniu od `schedule:setValue("associations.thermostats", …)`, które działa). Tylko aplikacja.
+- **Limity:** `open(100)` jest przycinane do `opening_maximum` (fabrycznie **50 %**) — czytaj limit każdej głowicy i otwieraj „do jej maksimum"; zamykaj do `opening_minimum`, nie do twardego 0.
+- **Sam tryb `heating` nie otwiera głowicy** — termostat otwiera dopiero, gdy `temperatura < zadana`. W pomieszczeniu dogrzanym (albo cieplejszym niż `target_temperature_maximum`) nie otworzysz jej żadną komendą.
+- **Harmonogram termostatu włącz/wyłącz** (bez ruszania przypisań): `call("enable_schedule_mode")` / `call("enable_constant_mode", zadana_0_1C)`.
+- **Tymczasowa zadana, która sama się cofa:** `call("enable_time_limited_mode", { minuty, zadana_0_1C })`; anulowanie: `call("disable_time_limited_mode")`. Idealne do wymuszeń serwisowych — nie trzeba pamiętać stanu pierwotnego.
 
 ## 3. Zdarzenia
 `onEvent(event)` wołane dla wszystkich zdarzeń; rozgałęziaj:
