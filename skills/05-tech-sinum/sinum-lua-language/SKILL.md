@@ -96,6 +96,7 @@ Jednostki: temp 0.1 °C, wiatr 0.1 km/h, ciśnienie hPa, opady 0.1 mm/h, UV 0.1,
 - **`notify:info(tytuł, treść)` / `notify:error(...)`** — powiadomienia push do aplikacji SINUM (nie SMS/e-mail).
 - **`variable[N]`** — trwała pamięć (NVM): `variable[1]:getValue()`, `:setValue(x)`, `:changedValue()`. Do agregatów tydzień/miesiąc, liczników między restartami.
 - **`os.time()` / `os.date(...)`** — czas lokalny centrali (zwykłe formatowanie). `utils.time:toISO(ts, …)`, `utils.table:forEach(...)`. Globale `sunrise/sunset/dawn/dusk`: `sunrise:hour()`, `:minute()`, `:timeOfDay()`.
+- **Dni ustawowo wolne (PL)** do harmonogramów obniżeń/przerw: STAŁE jako lista `{dzień,miesiąc}` + RUCHOME liczone z **Wielkanocy** (algorytm gregoriański → mies./dzień), a Poniedziałek Wielk. `+1`, Zielone Świątki `+49`, Boże Ciało `+60` przez `os.time{...}` + `os.date("*t", t + n*86400)`. Nie wpisuj świąt ręcznie co roku. Zakres dat z zawijaniem przez Nowy Rok: `cur=M*100+D`; jeśli `start<=end` to `cur∈[start,end]`, inaczej `cur>=start or cur<=end`.
 
 ## 6b. Harmonogramy (`schedule[id]`)
 Globalny kontener `schedule[id]` (jak `wtp`). Typ przez `getValue("type")`: `thermal`, `temperature_curve`, `relay_control`. Custom device **odczytuje wynik** dowolnego harmonogramu (nie musi być przypisany) i stosuje go we własnej logice. Reaguj na zdarzenie **`schedule_state_changed`** lub poll 60 s; `schedule[id]:changed()` / `:changedValue("prop")`.
