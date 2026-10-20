@@ -50,9 +50,11 @@ oraz `*_parent_device[id]`.
 ## 2b. Głowice grzejnikowe ↔ termostat wirtualny (drogo okupione)
 - ⛔ **`glowica:call("open", x)` jest ODRZUCANE**, gdy głowica należy do termostatu:
   `Validation failed! Command 'open' cannot be executed. Reason: Radiator actuator is already managed by the virtual thermostat.`
-- ✅ **Jedyny sposób:** odebrać termostatowi zarządzanie — `termostat:setValue("radiator_control.use_for_heating", false)`.
-  Wtedy `open()` przechodzi. **Po robocie przywróć `true`.**
-  ⚠️ Manual pisze przy tym „(always closed)" — to opis zachowania **termostatu** (przestaje ich używać do grzania), **NIE** wymuszenie zamknięcia głowicy. Odczytanie tego jako „zamyka" kosztowało kilka iteracji.
+- ✅ **Odebranie zarządzania:** `termostat:setValue("radiator_control.use_for_heating", false)` — wtedy `open()` przechodzi walidację. **Po robocie przywróć `true`.**
+- ⛔ **Ale to NIE wystarcza w trybie `heating`.** Manual: głowice „controlled while heating or not (**always closed**)" — termostat w trybie heating z `use_for_heating=false` **DOMYKA głowice** i nasze `open()` przegrywa (re-open co poll = walka). Działa to tylko w trybie **OFF**.
+  ✅ Na czas wymuszonego otwarcia: `use_for_heating=false` **+ `call("set_mode","off")`**; zapamiętaj tryb sprzed przejęcia, pomijaj te termostaty w logice sezonu/grup i pilnuj co poll; po czasie: zamknij → `use_for_heating=true` → przywróć tryb. Termostat z `mode_mutable=false` pomiń (samo zdjęcie `use_for_heating` trzymałoby jego głowice zamknięte) i zgłoś z nazwy.
+  ⚠️ Pułapka oceny: test w **sezonie letnim** (termostaty już OFF) „potwierdził", że samo `use_for_heating=false` wystarcza — w październiku wyszło, że nie (2026-10-19, device 47). Testuj otwieranie głowic przy termostatach w trybie **heating**.
+  ⚠️ Skutek uboczny trybu OFF: termostat nie zgłasza zapotrzebowania (`state=false`) — źródło ciepła może stanąć na czas otwarcia.
 - ⚠️ **KOLEJNOŚĆ przy kończeniu:** najpierw **zamknij/ustaw głowice** (są jeszcze odmanagowane → komenda przechodzi), **dopiero potem** oddaj `use_for_heating = true`. Odwrotna kolejność = komendy cicho odrzucone, głowice zostają otwarte.
 - ⛔ **`termostat:getValue("associations.radiator_actuators")` jest READ-ONLY** — odpięcia/przypięcia głowicy z Lua **nie da się** zrobić (w odróżnieniu od `schedule:setValue("associations.thermostats", …)`, które działa). Tylko aplikacja.
 - **Limity:** `open(100)` jest przycinane do `opening_maximum` (fabrycznie **50 %**) — czytaj limit każdej głowicy i otwieraj „do jej maksimum"; zamykaj do `opening_minimum`, nie do twardego 0.
